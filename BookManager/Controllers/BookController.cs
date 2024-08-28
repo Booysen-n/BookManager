@@ -15,7 +15,8 @@ namespace BookManager.Controllers
         }
         public async Task<IActionResult> Index()
         {
-            var books = await _context.Books.Include(b => b.Publisher)
+            var books = await _context.Books
+                .Include(b => b.Publisher)
                 .Include(b => b.BookAuthors)
                 .ThenInclude(ba => ba.Author)
                 .ToListAsync();
@@ -29,10 +30,20 @@ namespace BookManager.Controllers
             {
                 return NotFound();
             }
-            var book = await _context.Books.Include(b => b.Publisher)
+            var book = await _context.Books
+                .Include(b => b.Publisher)
                 .Include(b => b.BookAuthors)
                 .ThenInclude(ba => ba.Author)
-                .FirstOrDefaultAsync(m => m.Id == id);
+                .ToListAsync();
+            var bookViewModels = books.Select(book => new BookViewModel
+            {
+                Id = book.Id,
+                Title = book.Title,
+                ISBN = book.ISBN,
+                PublicationDate = book.PublicationDate,
+                PublisherName = book.PublisherName,
+                AuthorNames = book.AuthorNames.Select(ba => ba.Author.Name).ToList()
+            }).ToList();
 
             if (book == null)
             {
@@ -64,8 +75,8 @@ namespace BookManager.Controllers
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewBag.PublisherId = new SelectList(_context.Publishers, "Id", "Name");
-            ViewBag.Authors = new MultiSelectList(_context.Authors, "Id", "Name");
+            ViewBag.PublisherId = new SelectList(_context.Publishers, "Id", "Name", book.PublisherId);
+            ViewBag.Authors = new MultiSelectList(_context.Authors, "Id", "Name", selectedAuthors);
             return View(book);
         }
     }
